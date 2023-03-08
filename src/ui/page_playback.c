@@ -26,6 +26,9 @@ static lv_coord_t row_dsc[] = {150, 30, 150, 30, 150, 30, 30, LV_GRID_TEMPLATE_L
 static media_db_t media_db;
 static pb_ui_item_t pb_ui[ITEMS_LAYOUT_CNT];
 
+static lv_obj_t * context_menu;
+static lv_obj_t * currentButton = NULL;
+
 static lv_obj_t *page_playback_create(lv_obj_t *parent, panel_arr_t *arr) {
     lv_obj_t *page = lv_menu_page_create(parent, NULL);
     lv_obj_clear_flag(page, LV_OBJ_FLAG_SCROLLABLE);
@@ -308,30 +311,52 @@ static void mark_video_file(int seq) {
     update_page();
 }
 
-static void delete_video_file(int seq) {
+static void context_menu_handler(lv_event_t * e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t * obj = lv_event_get_target(e);
+    if(code == LV_EVENT_CLICKED) {
+        LV_LOG_USER("Clicked: %s", lv_list_get_btn_text(context_menu, obj));
+    }
+}
+
+static void call_context_menu(int seq) {
     media_file_node_t *pnode = get_list(seq);
             if (!pnode) {
-                perror("delete_video_file failed. (PNODE ERROR)");
+                perror("call_context_menu failed. (PNODE ERROR)");
                 return;
             }
 
+    context_menu = lv_list_create(lv_scr_act());
+    lv_obj_set_size(context_menu, 180, 220);
+    lv_obj_center(context_menu);
+
+    lv_obj_t * btn;
+
+    lv_list_add_text(context_menu, "File");
+    btn = lv_list_add_btn(context_menu, LV_SYMBOL_FILE, "Delete");
+    lv_obj_add_event_cb(btn, context_menu_handler, LV_EVENT_CLICKED, NULL);
+    btn = lv_list_add_btn(context_menu, LV_SYMBOL_DIRECTORY, "Delete all");
+    lv_obj_add_event_cb(btn, context_menu_handler, LV_EVENT_CLICKED, NULL);
+
+    currentButton = lv_obj_get_child(context_menu, 0);
+    //lv_obj_add_state(currentButton, LV_STATE_FOCUSED);
+    
+    /*
+    
     char cmd[128];
     sprintf(cmd, "rm %s/%s.*", MEDIA_FILES_DIR, pnode->label);
 
     if (system(cmd) != -1) {
-
         walk_sdcard();
         media_db.cur_sel = constrain(seq, 0, (media_db.count - 1));
         update_page();
-
-        perror("delete_video_file successful.");
-
+        LOGD("delete_video_file successful.");
     } else {
-
-        perror("delete_video_file failed.");
-
+        LOGE("delete_video_file failed.");
     }
     
+    */
 }
 
 static void page_playback_exit() {
@@ -401,7 +426,7 @@ void pb_key(uint8_t key) {
         break;
 
     case RIGHT_KEY_PRESS:
-        delete_video_file(media_db.cur_sel);
+        call_context_menu(media_db.cur_sel);
         break;
     }
     done = true;
